@@ -65,7 +65,9 @@ class Pfm(object):
         kwargs = Dict(kwargs)
         kwargs.setdefault("method", "POST")
         kwargs.setdefault("response_handler", ResponseHandler.normal_handler)
-        kwargs.setdefault("url", f"{self.base_url}{ReqeustUrl.GET_DATA_SET_URL}")
+        kwargs.setdefault("url", f"{ReqeustUrl.GET_DATA_SET_URL}")
+        if not kwargs.get("url", "").startswith("http"):
+            kwargs["url"] = self.base_url + kwargs["url"]
         kwargs.setdefault("headers", Dict())
         kwargs.headers.setdefault("Content-Type", "text/xml; charset=utf-8")
         kwargs.setdefault("data", Dict())
