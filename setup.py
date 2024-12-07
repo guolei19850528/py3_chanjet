@@ -17,7 +17,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setup(
     name="py3-chanjet",
-    version="1.0.0",
+    version="1.1.0",
     description="The Python3 Chanjet Library Developed By Guolei",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -25,10 +25,10 @@ setup(
     author="guolei",
     author_email="174000902@qq.com",
     license="MIT",
-    keywors=["chanjet", "畅捷通", "用友", "t+", "tplus", "u8+", "u8plus"],
+    keywors=["chanjet", "畅捷通", "用友", "t+", "tplus", "u8+", "u8plus", "guolei", "郭磊"],
     packages=setuptools.find_packages('./'),
     install_requires=[
-        "requests",
+        "py3-requests",
         "diskcache",
         "redis",
         "addict",

@@ -10,27 +10,28 @@ Github：https://github.com/guolei19850528/py3_chanjet
 """
 from types import NoneType
 
-import requests
+import py3_requests
 import xmltodict
 from addict import Dict
 from bs4 import BeautifulSoup
+from requests import Response
 
 
-class Pfm(object):
-    def __init__(self, base_url: str = None):
-        base_url = base_url if isinstance(base_url, str) else ""
-        if base_url.endswith("/"):
-            base_url = base_url[:-1]
-        self.base_url = base_url
+class ReqeustUrl:
+    BASE_URL: str = ""
+    GET_DATA_SET_URL: str = "/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
 
-    def _default_response_handler(self, response: requests.Response = None):
-        if isinstance(response, requests.Response) and response.status_code == 200:
+
+class ResponseHandler:
+    @staticmethod
+    def normal_handler(response: Response = None):
+        if isinstance(response, Response):
             xml_doc = BeautifulSoup(
                 response.text,
                 features="xml"
             )
             if isinstance(xml_doc, NoneType):
-                return [], response
+                return []
 
             results = Dict(
                 xmltodict.parse(
@@ -38,15 +39,19 @@ class Pfm(object):
                         "utf-8"))
             ).NewDataSet.Table
             if isinstance(results, list):
-                return results, response
+                return results
             if isinstance(results, dict) and len(results.keys()):
-                return [results], response
+                return [results]
+        raise Exception(f"Response Handler Error {response.status_code}|{response.text}")
+
+
+class Pfm(object):
+    def __init__(self, base_url: str = ""):
+        self.base_url = base_url[:-1] if base_url.endswith("/") else base_url
 
     def get_data_set(
             self,
             sql: str = None,
-            method: str = "POST",
-            url: str = "/estate/webService/ForcelandEstateService.asmx?op=GetDataSet",
             **kwargs
     ):
         """
@@ -57,15 +62,13 @@ class Pfm(object):
         :param kwargs:
         :return:
         """
-        method = method if isinstance(method, str) else "POST"
-        url = url if isinstance(url, str) else "/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
-        if not url.startswith("http"):
-            if not url.startswith("/"):
-                url = f"/{url}"
-            url = f"{self.base_url}{url}"
-        headers = kwargs.get("headers", {})
-        headers.setdefault("Content-Type", "text/xml; charset=utf-8")
-        kwargs["headers"] = headers
+        kwargs = Dict(kwargs)
+        kwargs.setdefault("method", "POST")
+        kwargs.setdefault("response_handler", ResponseHandler.normal_handler)
+        kwargs.setdefault("url", f"{self.base_url}{ReqeustUrl.GET_DATA_SET_URL}")
+        kwargs.setdefault("headers", Dict())
+        kwargs.headers.setdefault("Content-Type", "text/xml; charset=utf-8")
+        kwargs.setdefault("data", Dict())
         data = xmltodict.unparse(
             {
                 "soap:Envelope": {
@@ -81,14 +84,14 @@ class Pfm(object):
                 }
             }
         )
-        kwargs["data"] = data
-        response = requests.request(method=method, url=url, **kwargs)
-        return self._default_response_handler(response)
+        kwargs.data = data
+        return py3_requests.request(**kwargs.to_dict())
 
     def query_actual_collection_with_conditionals(
             self,
             columns: str = None,
-            conditionals: str = None
+            conditionals: str = None,
+            **kwargs
     ):
         """
         conditionals and (cml.EstateID= and cbi.ItemName='' and rd.RmNo='' and cfi.EDate>='')
@@ -132,4 +135,6 @@ class Pfm(object):
                     {conditionals}
                 order by cfi.ChargeFeeItemID desc;
                 """
-        return self.get_data_set(sql=sql)
+        kwargs = Dict(kwargs)
+        kwargs.setdefault("sql", sql)
+        return self.get_data_set(**kwargs)
