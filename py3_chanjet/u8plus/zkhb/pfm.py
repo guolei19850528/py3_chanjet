@@ -16,33 +16,29 @@ from addict import Dict
 from bs4 import BeautifulSoup
 from requests import Response
 
-
-class ReqeustUrl:
-    BASE_URL: str = ""
-    GET_DATA_SET_URL: str = "/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
+request_urls=Dict()
+request_urls.get_data_set="/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
 
 
-class ResponseHandler:
-    @staticmethod
-    def normal_handler(response: Response = None):
-        if isinstance(response, Response):
-            xml_doc = BeautifulSoup(
-                response.text,
-                features="xml"
-            )
-            if isinstance(xml_doc, NoneType):
-                return []
+def normal_response_handler(response: Response = None):
+    if isinstance(response, Response):
+        xml_doc = BeautifulSoup(
+            response.text,
+            features="xml"
+        )
+        if isinstance(xml_doc, NoneType):
+            return []
 
-            results = Dict(
-                xmltodict.parse(
-                    xml_doc.find("NewDataSet").encode(
-                        "utf-8"))
-            ).NewDataSet.Table
-            if isinstance(results, list):
-                return results
-            if isinstance(results, dict) and len(results.keys()):
-                return [results]
-        raise Exception(f"Response Handler Error {response.status_code}|{response.text}")
+        results = Dict(
+            xmltodict.parse(
+                xml_doc.find("NewDataSet").encode(
+                    "utf-8"))
+        ).NewDataSet.Table
+        if isinstance(results, list):
+            return results
+        if isinstance(results, dict) and len(results.keys()):
+            return [results]
+    raise Exception(f"Response Handler Error {response.status_code}|{response.text}")
 
 
 class Pfm(object):
@@ -64,8 +60,8 @@ class Pfm(object):
         """
         kwargs = Dict(kwargs)
         kwargs.setdefault("method", "POST")
-        kwargs.setdefault("response_handler", ResponseHandler.normal_handler)
-        kwargs.setdefault("url", f"{ReqeustUrl.GET_DATA_SET_URL}")
+        kwargs.setdefault("response_handler", normal_response_handler)
+        kwargs.setdefault("url", request_urls.get_data_set)
         if not kwargs.get("url", "").startswith("http"):
             kwargs["url"] = self.base_url + kwargs["url"]
         kwargs.setdefault("headers", Dict())
