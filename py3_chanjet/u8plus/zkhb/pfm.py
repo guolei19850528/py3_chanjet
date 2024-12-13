@@ -16,19 +16,23 @@ from addict import Dict
 from bs4 import BeautifulSoup
 from requests import Response
 
-request_urls=Dict()
-request_urls.get_data_set="/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
+request_urls = Dict()
+request_urls.get_data_set = "/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
 
 
-def normal_response_handler(response: Response = None):
-    if isinstance(response, Response):
-        xml_doc = BeautifulSoup(
-            response.text,
-            features="xml"
+class RequestUrl(py3_requests.RequestUrl):
+    GETDATASET = "/estate/webService/ForcelandEstateService.asmx?op=GetDataSet"
+
+
+class ResponseHandler(py3_requests.ResponseHandler):
+    @staticmethod
+    def success(response: Response = None):
+        xml_doc = ResponseHandler.status_code_200_beautifulsoup(
+            response=response,
+            beautifulsoup_kwargs={"features": "xml"}
         )
         if isinstance(xml_doc, NoneType):
             return []
-
         results = Dict(
             xmltodict.parse(
                 xml_doc.find("NewDataSet").encode(
@@ -38,29 +42,25 @@ def normal_response_handler(response: Response = None):
             return results
         if isinstance(results, dict) and len(results.keys()):
             return [results]
-    raise Exception(f"Response Handler Error {response.status_code}|{response.text}")
 
 
 class Pfm(object):
     def __init__(self, base_url: str = ""):
         self.base_url = base_url[:-1] if base_url.endswith("/") else base_url
 
-    def get_data_set(
+    def get_dataset(
             self,
             sql: str = None,
             **kwargs
     ):
         """
-        get data set
+        get dataset
         :param sql:
-        :param method:
-        :param url:
-        :param kwargs:
         :return:
         """
         kwargs = Dict(kwargs)
         kwargs.setdefault("method", "POST")
-        kwargs.setdefault("response_handler", normal_response_handler)
+        kwargs.setdefault("response_handler", ResponseHandler.success)
         kwargs.setdefault("url", request_urls.get_data_set)
         if not kwargs.get("url", "").startswith("http"):
             kwargs["url"] = self.base_url + kwargs["url"]
@@ -85,20 +85,19 @@ class Pfm(object):
         kwargs.data = data
         return py3_requests.request(**kwargs.to_dict())
 
-    def query_actual_collection_with_conditionals(
+    def query_actual_collection_with_conditions(
             self,
-            columns: str = None,
-            conditionals: str = None,
+            columns: str = "",
+            conditions: str = "",
             **kwargs
     ):
         """
-        conditionals and (cml.EstateID= and cbi.ItemName='' and rd.RmNo='' and cfi.EDate>='')
+        query actual collection with conditions
+        conditions=" and (cml.EstateID= and cbi.ItemName='' and rd.RmNo='' and cfi.EDate>='') "
         :param columns:
-        :param conditionals:
+        :param conditions:
         :return:
         """
-        columns = columns if isinstance(columns, str) else ""
-        conditionals = conditionals if isinstance(conditionals, str) else ""
         sql = f"""select
                     {columns}
                     cml.ChargeMListID,
@@ -130,9 +129,9 @@ class Pfm(object):
                     cfi.RmId=rd.RmId
                     and
                     cfi.CBillItemID=cbi.CBillItemID
-                    {conditionals}
+                    {conditions}
                 order by cfi.ChargeFeeItemID desc;
                 """
         kwargs = Dict(kwargs)
         kwargs.setdefault("sql", sql)
-        return self.get_data_set(**kwargs)
+        return self.get_dataset(**kwargs)

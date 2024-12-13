@@ -17,7 +17,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setup(
     name="py3-chanjet",
-    version="1.1.2",
+    version="1.1.3",
     description="The Python3 Chanjet Library Developed By Guolei",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -36,7 +36,8 @@ setup(
         "jsonschema",
         "xmltodict",
         "beautifulsoup4",
-        "lxml"
+        "lxml",
+        "html5lib",
     ],
     python_requires='>=3.0',
     zip_safe=False
