@@ -44,7 +44,7 @@ class ResponseHandler(py3_requests.ResponseHandler):
             return [results]
 
 
-class Pfm(object):
+class PFM(object):
     def __init__(self, base_url: str = ""):
         self.base_url = base_url[:-1] if base_url.endswith("/") else base_url
 
@@ -59,7 +59,7 @@ class Pfm(object):
         :return:
         """
         kwargs = Dict(kwargs)
-        kwargs.setdefault("method", "POST")
+        kwargs.setdefault("method", py3_requests.RequestMethod.POST)
         kwargs.setdefault("response_handler", ResponseHandler.success)
         kwargs.setdefault("url", request_urls.get_data_set)
         if not kwargs.get("url", "").startswith("http"):
