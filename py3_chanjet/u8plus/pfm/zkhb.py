@@ -9,6 +9,7 @@ Github：https://github.com/guolei19850528/py3_chanjet
 =================================================
 """
 from types import NoneType
+from typing import Union
 
 import py3_requests
 import xmltodict
@@ -44,11 +45,11 @@ class ResponseHandler(py3_requests.ResponseHandler):
             return [results]
 
 
-class PFM(object):
+class Zkhb(object):
     def __init__(self, base_url: str = ""):
         self.base_url = base_url[:-1] if base_url.endswith("/") else base_url
 
-    def get_dataset(
+    def get_data_set(
             self,
             sql: str = None,
             **kwargs
@@ -85,53 +86,70 @@ class PFM(object):
         kwargs.data = data
         return py3_requests.request(**kwargs.to_dict())
 
-    def query_actual_collection_with_conditions(
+    def query_actual_charge_bill_item_list(
             self,
-            columns: str = "",
-            conditions: str = "",
+            top_column_string: str = "",
+            condition_string: str = "",
+            order_by_string: str = "order by cfi.ChargeFeeItemID desc",
             **kwargs
     ):
         """
-        query actual collection with conditions
-        conditions=" and (cml.EstateID= and cbi.ItemName='' and rd.RmNo='' and cfi.EDate>='') "
-        :param columns:
-        :param conditions:
+        按条件查询实际收费列表
+        :param top_column_string:
+        :param condition_string:
+        :param order_by_string:
+        :param kwargs:
         :return:
         """
-        sql = f"""select
-                    {columns}
-                    cml.ChargeMListID,
-                    cml.ChargeMListNo,
-                    cml.ChargeTime,
-                    cml.PayerName,
-                    cml.ChargePersonName,
-                    cml.ActualPayMoney,
-                    cml.EstateID,
-                    cml.ItemNames,
-                    ed.Caption as EstateName,
-                    cfi.ChargeFeeItemID,
-                    cfi.ActualAmount,
-                    cfi.SDate,
-                    cfi.EDate,
-                    cfi.RmId,
-                    rd.RmNo,
-                    cml.CreateTime,
-                    cml.LastUpdateTime,
-                    cbi.ItemName,
-                    cbi.IsPayFull
-                from
-                    chargeMasterList cml,EstateDetail ed,ChargeFeeItem cfi,RoomDetail rd,ChargeBillItem cbi
-                where
-                    cml.EstateID=ed.EstateID
-                    and
-                    cml.ChargeMListID=cfi.ChargeMListID
-                    and
-                    cfi.RmId=rd.RmId
-                    and
-                    cfi.CBillItemID=cbi.CBillItemID
-                    {conditions}
-                order by cfi.ChargeFeeItemID desc;
-                """
+        sql = f"select {top_column_string} {','.join([
+            'cml.ChargeMListID',
+            'cml.ChargeMListNo',
+            'cml.ChargeTime',
+            'cml.PayerName',
+            'cml.ChargePersonName',
+            'cml.ActualPayMoney',
+            'cml.EstateID',
+            'cml.ItemNames',
+            'ed.Caption as EstateName',
+            'cfi.ChargeFeeItemID',
+            'cfi.ActualAmount',
+            'cfi.SDate',
+            'cfi.EDate',
+            'cfi.RmId',
+            'rd.RmNo',
+            'cml.CreateTime',
+            'cml.LastUpdateTime',
+            'cbi.ItemName',
+            'cbi.IsPayFull',
+        ])} {''.join([
+            ' from chargeMasterList as cml',
+            ' left join EstateDetail as ed on cml.EstateID=ed.EstateID',
+            ' left join ChargeFeeItem as cfi on cml.ChargeMListID=cfi.ChargeMListID',
+            ' left join RoomDetail as rd on cfi.RmId=rd.RmId',
+            ' left join ChargeBillItem as cbi on cfi.CBillItemID=cbi.CBillItemID',
+        ])} where 1=1 {condition_string} {order_by_string};";
+
         kwargs = Dict(kwargs)
         kwargs.setdefault("sql", sql)
-        return self.get_dataset(**kwargs)
+        return self.get_data_set(**kwargs)
+
+    def query_actual_charge_bill_item_list_condition_string_formatter(
+            self,
+            estate_id: Union[str, int] = "",
+            charge_type: str = "",
+            room_no: str = "",
+            end_date_begin: str = "",
+            end_date_end: str = "",
+    ):
+        condition_string_list = []
+        if int(estate_id) > 0:
+            condition_string_list.append(f" and cml.EstateID='{estate_id}'")
+        if isinstance(charge_type, str) and len(charge_type):
+            condition_string_list.append(f" and cbi.ItemName='{charge_type}'")
+        if isinstance(room_no, str) and len(room_no):
+            condition_string_list.append(f" and rd.RmNo='{room_no}'")
+        if isinstance(end_date_begin, str) and len(end_date_begin):
+            condition_string_list.append(f" and cfi.EDate>='{end_date_begin}'")
+        if isinstance(end_date_end, str) and len(end_date_end):
+            condition_string_list.append(f" and cfi.EDate<='{end_date_end}'")
+        return "".join(condition_string_list)
